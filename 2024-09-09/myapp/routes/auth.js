@@ -41,4 +41,33 @@ router.post("/register", async (req, res) => {
   }
 });
 
+router.post("/login", async (req, res) => {
+  try {
+    const { username, password } = loginSchema.parse(req.body);
+
+    // Find user
+    const user = await prisma.user.findUnique({ where: { username } });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username" });
+    }
+
+    // Compare password
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // Generate token
+    const token = generateToken({ id: user.id, username: user.username });
+
+    res.status(200).json({ message: "Login successful", token });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/profile", authenticateToken, async (req, res) => {
+  res.status(200).json({ message: "User profile", user: req.user });
+});
+
 module.exports = router;
